@@ -430,6 +430,31 @@ class SchemaValidator(object):
     def _validate(self, data, schema):
         self.__validate("_data", {"_data": data}, schema)
 
+    _validator_order = [
+        'type',
+        'properties',
+        'items',
+        'required',
+        'blank',
+        'patternProperties',
+        'additionalItems',
+        'additionalProperties',
+        'requires',
+        'dependencies',
+        'minimum',
+        'maximum',
+        'minLength',
+        'maxLength',
+        'format',
+        'pattern',
+        'uniqueItems',
+        'enum',
+        'title',
+        'description',
+        'divisibleBy',
+        'disallow',
+    ]
+
     def __validate(self, fieldname, data, schema):
 
         if schema is not None:
@@ -450,14 +475,20 @@ class SchemaValidator(object):
             if 'blank' not in schema:
                 newschema['blank'] = False
 
-            for schemaprop in newschema:
+            # add new keys as they're found to the end of the ordering
+            #for k in set(newschema.keys()) - set(self._validator_order):
+            #    self._validator_order.append(k)
 
-                validatorname = "validate_" + schemaprop
+            for schemaprop in self._validator_order:
 
-                validator = getattr(self, validatorname, None)
-                if validator:
-                    validator(data, fieldname, schema,
-                              newschema.get(schemaprop))
+                if schemaprop in newschema:
+
+                    validatorname = "validate_" + schemaprop
+
+                    validator = getattr(self, validatorname, None)
+                    if validator:
+                        validator(data, fieldname, schema,
+                                  newschema.get(schemaprop))
 
         return data
 
