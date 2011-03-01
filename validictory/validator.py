@@ -431,21 +431,18 @@ class SchemaValidator(object):
         self.__validate("_data", {"_data": data}, schema)
 
     _validator_order = [
+        'required',
         'type',
         'properties',
         'items',
-        'required',
         'blank',
         'patternProperties',
-        'additionalItems',
-        'additionalProperties',
         'requires',
         'dependencies',
         'minimum',
         'maximum',
         'minLength',
         'maxLength',
-        'format',
         'pattern',
         'uniqueItems',
         'enum',
@@ -453,6 +450,9 @@ class SchemaValidator(object):
         'description',
         'divisibleBy',
         'disallow',
+        'additionalItems',
+        'additionalProperties',
+        'format',
     ]
 
     def __validate(self, fieldname, data, schema):
