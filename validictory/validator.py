@@ -4,6 +4,7 @@ import copy
 from datetime import datetime
 import warnings
 from collections import Mapping, Container
+import json
 
 if sys.version_info[0] == 3:
     _str_type = str
@@ -23,6 +24,11 @@ class ValidationError(ValueError):
     :class:`ValueError`)
     """
 
+class UnexpectedPropertyError(ValidationError):
+    """
+    unexpected property encountered during validation (subclass of
+    :class:`ValidationError`)
+    """
 
 def _generate_datetime_validator(format_option, dateformat_string):
     def validate_format_datetime(validator, fieldname, value, format_option):
@@ -204,6 +210,7 @@ class SchemaValidator(object):
         '''
         # Make sure the field is present
         if fieldname not in x and required:
+            #import pdb;pdb.set_trace()
             self._error("Required field '%(fieldname)s' is missing",
                         None, fieldname)
 
@@ -270,8 +277,7 @@ class SchemaValidator(object):
                     # then we don't accept any additional properties.
                     if (isinstance(additionalProperties, bool) and
                         not additionalProperties):
-                        self._error("additional properties not defined by 'properties' are not allowed in field '%(fieldname)s'",
-                                    None, fieldname)
+                        raise UnexpectedPropertyError(eachProperty)
                     self.__validate(eachProperty, value,
                                     additionalProperties)
         else:
