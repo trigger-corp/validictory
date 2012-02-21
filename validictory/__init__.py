@@ -6,7 +6,7 @@ __all__ = ['validate', 'SchemaValidator', 'ValidationError', 'SchemaError']
 __version__ = '0.8.0'
 
 
-def validate(data, schema, validator_cls=SchemaValidator,
+def validate(data, schema, validator_cls=SchemaValidator, default_location="_data",
              format_validators=None, required_by_default=True, blank_by_default=False):
     '''
     Validates a parsed json document against the provided schema. If an
@@ -24,7 +24,7 @@ def validate(data, schema, validator_cls=SchemaValidator,
         ``required`` schema attribute False by default.
     '''
     v = validator_cls(format_validators, required_by_default, blank_by_default)
-    return v.validate(data, schema)
+    return v.validate(data, schema, default_location)
 
 if __name__ == '__main__':
     import sys

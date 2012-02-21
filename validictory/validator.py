@@ -158,7 +158,7 @@ class SchemaValidator(object):
                     self._error("Value %(value)r for field '%(fieldname)s' is not of type %(fieldtype)s",
                                 value, fieldname, fieldtype=fieldtype)
 
-    def validate_properties(self, x, fieldname, schema, properties=None):
+    def validate_properties(self, x, fieldname, schema, properties=None, location="config"):
         '''
         Validates properties of a JSON object by processing the object's
         schema recursively
@@ -169,7 +169,7 @@ class SchemaValidator(object):
                 if isinstance(properties, dict):
                     for eachProp in properties:
                         self.__validate(eachProp, value,
-                                        properties.get(eachProp))
+                                        properties.get(eachProp), location + "." + fieldname)
                 else:
                     raise SchemaError("Properties definition of field '%s' is not an object" % fieldname)
 
@@ -196,23 +196,24 @@ class SchemaValidator(object):
                         try:
                             self._validate(eachItem, items)
                         except ValueError as e:
-                            # a bit of a hack: replace reference to _data
+                            # a bit of a hack: replace reference to config
                             # with 'list item' so error messages make sense
-                            old_error = str(e).replace("field '_data'",
+                            old_error = str(e).replace("field 'config'",
                                                        'list item')
                             raise type(e)("Failed to validate field '%s' list schema: %s" % (fieldname, old_error))
                 else:
                     raise SchemaError("Properties definition of field '%s' is not a list or an object" % fieldname)
 
-    def validate_required(self, x, fieldname, schema, required):
+    def validate_required(self, x, fieldname, schema, required, location):
         '''
         Validates that the given field is present if required is True
         '''
         # Make sure the field is present
+        if location.startswith("."):
+            location = location[1:]
         if fieldname not in x and required:
-            #import pdb;pdb.set_trace()
-            self._error("Required field '%(fieldname)s' is missing",
-                        None, fieldname)
+            self._error("Required field '%(fieldname)s' is missing from %(location)s",
+                        None, fieldname, location=location)
 
     def validate_blank(self, x, fieldname, schema, blank=False):
         '''
@@ -470,16 +471,16 @@ class SchemaValidator(object):
         self._error("Value %(value)r of type %(disallow)s is disallowed for field '%(fieldname)s'",
                     x.get(fieldname), fieldname, disallow=disallow)
 
-    def validate(self, data, schema):
+    def validate(self, data, schema, location="_data"):
         '''
         Validates a piece of json data against the provided json-schema.
         '''
-        self._validate(data, schema)
+        self._validate(data, schema, location="")
 
-    def _validate(self, data, schema):
-        self.__validate("_data", {"_data": data}, schema)
+    def _validate(self, data, schema, location="config"):
+        self.__validate("config", {"config": data}, schema, location)
 
-    def __validate(self, fieldname, data, schema):
+    def __validate(self, fieldname, data, schema, location):
 
         if schema is not None:
             if not isinstance(schema, dict):
@@ -502,9 +503,11 @@ class SchemaValidator(object):
             for schemaprop in newschema:
 
                 validatorname = "validate_" + schemaprop
-
                 validator = getattr(self, validatorname, None)
-                if validator:
+                if (schemaprop == "properties") or (schemaprop == "required"):
+                    validator(data, fieldname, schema,
+                              newschema.get(schemaprop), location)
+                elif validator:
                     validator(data, fieldname, schema,
                               newschema.get(schemaprop))
 
