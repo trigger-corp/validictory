@@ -11,6 +11,8 @@ if sys.version_info[0] == 3:
 else:
     _str_type = basestring
 
+# if given in properties in a schema, will be used to match against any non-explicit properties found
+FIELD_WILDCARD = "*"
 
 class SchemaError(ValueError):
     """
@@ -163,8 +165,7 @@ class SchemaValidator(object):
         Validates properties of a JSON object by processing the object's
         schema recursively
         '''
-        if x.get(fieldname) is not None:
-            value = x.get(fieldname)
+        def validate_one_property(value, properties, location, fieldname):
             if isinstance(value, dict):
                 if isinstance(properties, dict):
                     for eachProp in properties:
@@ -172,6 +173,13 @@ class SchemaValidator(object):
                                         properties.get(eachProp), location + "." + fieldname)
                 else:
                     raise SchemaError("Properties definition of field '%s' is not an object" % fieldname)
+
+        if fieldname == FIELD_WILDCARD:
+            for actual_name, value in x.iteritems():
+                validate_one_property(value, properties, location, actual_name)
+        elif x.get(fieldname) is not None:
+            value = x.get(fieldname)
+            validate_one_property(value, properties, location, fieldname)
 
     def validate_items(self, x, fieldname, schema, items=None):
         '''
@@ -211,7 +219,7 @@ class SchemaValidator(object):
         # Make sure the field is present
         if location.startswith("."):
             location = location[1:]
-        if fieldname not in x and required:
+        if fieldname != FIELD_WILDCARD and fieldname not in x and required:
             self._error("Required field '%(fieldname)s' is missing from %(location)s",
                         None, fieldname, location=location)
 
@@ -500,16 +508,23 @@ class SchemaValidator(object):
             if 'blank' not in schema:
                 newschema['blank'] = self.blank_by_default
 
-            for schemaprop in newschema:
+            def validate_one_field(fieldname, data, schema, location):
+                for schemaprop in newschema:
 
-                validatorname = "validate_" + schemaprop
-                validator = getattr(self, validatorname, None)
-                if (schemaprop == "properties") or (schemaprop == "required"):
-                    validator(data, fieldname, schema,
-                              newschema.get(schemaprop), location)
-                elif validator:
-                    validator(data, fieldname, schema,
-                              newschema.get(schemaprop))
+                    validatorname = "validate_" + schemaprop
+                    validator = getattr(self, validatorname, None)
+                    if (schemaprop == "properties") or (schemaprop == "required"):
+                        validator(data, fieldname, schema,
+                                newschema.get(schemaprop), location)
+                    elif validator:
+                        validator(data, fieldname, schema,
+                                newschema.get(schemaprop))
+
+            if fieldname == FIELD_WILDCARD:
+                for fieldname in data:
+                    validate_one_field(fieldname, data, schema, location)
+            else:
+                validate_one_field(fieldname, data, schema, location)
 
         return data
 

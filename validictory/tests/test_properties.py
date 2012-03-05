@@ -61,6 +61,22 @@ class TestProperties(TestCase):
 
         self.assertRaises(ValueError, validictory.validate, data, self.schema)
 
+    def test_unnamed_properties(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "*": { "type": "integer" }
+            }
+        }
+        data = {
+            "unexpected name": 10
+        }
+
+        try:
+            validictory.validate(data, schema)
+        except ValueError as e:
+            self.fail("Unexpected failure: %s" % e)
+
 class TestPatternProperties(TestCase):
     schema = { 'patternProperties': { '[abc]': { 'type': 'boolean' } } }
 
