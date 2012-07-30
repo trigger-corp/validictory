@@ -263,7 +263,7 @@ class SchemaValidator(object):
             self._validate(remaining, {'items': additionalItems})
 
     def validate_additionalProperties(self, x, fieldname, schema,
-                                      additionalProperties=None):
+                                      additionalProperties=None, location=''):
         '''
         Validates additional properties of a JSON object that were not
         specifically defined by the properties property
@@ -288,7 +288,7 @@ class SchemaValidator(object):
                         not additionalProperties):
                         raise UnexpectedPropertyError(eachProperty)
                     self.__validate(eachProperty, value,
-                                    additionalProperties)
+                                    additionalProperties, location)
         else:
             raise SchemaError("additionalProperties schema definition for field '%s' is not an object" % fieldname)
 
@@ -513,7 +513,7 @@ class SchemaValidator(object):
 
                     validatorname = "validate_" + schemaprop
                     validator = getattr(self, validatorname, None)
-                    if (schemaprop == "properties") or (schemaprop == "required"):
+                    if (schemaprop == "properties") or (schemaprop == "required") or (schemaprop == "additionalProperties"):
                         validator(data, fieldname, schema,
                                 newschema.get(schemaprop), location)
                     elif validator:
